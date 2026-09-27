@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# One version source for both workflows; editor and templates always match.
+# One version source for all workflows; editor and templates always match.
 GODOT_VERSION=4.7.2
 base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
 mkdir -p .tools

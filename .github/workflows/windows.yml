@@ -1,0 +1,34 @@
+name: Windows x86-64 build
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot and templates
+        run: bash tools/install-godot.sh
+      - name: Import and test
+        run: |
+          .tools/godot --headless --editor --path . --import --quit
+          .tools/godot --headless --path . --script tests/smoke.gd -- --smoke-test
+      - name: Export and package Windows x86-64
+        run: |
+          mkdir -p build/windows
+          .tools/godot --headless --path . --export-release Windows build/windows/little-space-prospector.exe
+          test -s build/windows/little-space-prospector.exe
+          test -s build/windows/little-space-prospector.pck
+          cp README.md build/windows/README.md
+          cd build/windows
+          zip -r ../little-space-prospector-windows-x86_64.zip .
+          unzip -t ../little-space-prospector-windows-x86_64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: little-space-prospector-windows-x86_64
+          path: build/little-space-prospector-windows-x86_64.zip
+          if-no-files-found: error

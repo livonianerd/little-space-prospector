@@ -37,9 +37,10 @@ Install the matching **4.7.2** export templates via Godot's editor, or run `bash
 ```sh
 .tools/godot --headless --editor --path . --import --quit
 .tools/godot --headless --path . --script tests/smoke.gd -- --smoke-test
-mkdir -p build/web build/linux
+mkdir -p build/web build/linux build/windows
 .tools/godot --headless --path . --export-release Web build/web/index.html
 .tools/godot --headless --path . --export-release Linux build/linux/little-space-prospector.x86_64
+.tools/godot --headless --path . --export-release Windows build/windows/little-space-prospector.exe
 python3 -m http.server 8000 --directory build/web
 ```
 
@@ -52,7 +53,7 @@ Open http://localhost:8000. Serve the web export over HTTP(S), not `file://`. Th
 3. In **Actions**, run **Web game and GitHub Pages**, or push to `main`.
 4. The deployment job reports the live address: `https://USERNAME.github.io/REPOSITORY/`.
 
-`.github/workflows/web.yml` imports, tests, exports, and deploys the game. `.github/workflows/linux.yml` separately builds Linux. Both run on Ubuntu 22.04 and install the editor and templates using the same pinned version in `tools/install-godot.sh`.
+`.github/workflows/web.yml` imports, tests, exports, and deploys the game. `.github/workflows/linux.yml` builds Linux, and `.github/workflows/windows.yml` cross-exports Windows x86-64. All three run on Ubuntu 22.04 and install the editor and templates using the same pinned version in `tools/install-godot.sh` (Godot 4.7.2).
 
 ## Linux download and run
 
@@ -64,6 +65,15 @@ chmod +x little-space-prospector.x86_64
 ```
 
 Targets **Ubuntu 22.04 x86-64** with OpenGL 3.3 support. The workflow launches the exported binary headlessly on Ubuntu 22.04 before packaging it. Pushing a `v*` tag also attaches the ZIP to a GitHub Release for public downloads without signing in.
+
+## Windows download and run
+
+1. Open [Windows x86-64 build](https://github.com/livonianerd/little-space-prospector/actions/workflows/windows.yml) in GitHub Actions and select a successful run. Builds run on pushes to `main`, `v*` tags, or manually through **Run workflow**.
+2. While signed in to GitHub, download the **little-space-prospector-windows-x86_64** artifact from the run's **Artifacts** section.
+3. Extract the downloaded artifact ZIP, then extract `little-space-prospector-windows-x86_64.zip` inside it.
+4. Keep `little-space-prospector.exe` and `little-space-prospector.pck` together in the extracted folder. Double-click the `.exe` to play. No Godot installation is needed.
+
+Use 64-bit Windows with an OpenGL 3.3-capable graphics driver. The build is unsigned. The workflow checks the export succeeds, verifies the executable and game data exist, and validates the ZIP before uploading it. It cross-exports on Linux; Windows runtime testing is not part of this workflow. Windows resource modification is disabled so exporting does not require Wine or rcedit.
 
 ## Verification
 
