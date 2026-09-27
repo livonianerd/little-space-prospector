@@ -5,7 +5,7 @@ func run() -> void:
 	var game = load("res://main.tscn").instantiate()
 	root.add_child(game)
 	game.save_enabled = false
-	game.start_game("girl")
+	game.start_game()
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -13,6 +13,7 @@ func run() -> void:
 	game.parts = ["p1", "p3", "p5"]
 	game.installed = 3
 	game.upgrades = ["Golden fins", "Crystal window", "Garden lights"]
+	game.rebuild_ship()
 	game.show_workshop()
 	await process_frame
 	await RenderingServer.frame_post_draw
