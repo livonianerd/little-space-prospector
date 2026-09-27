@@ -39,5 +39,19 @@ func run() -> void:
 	game.mode = "play"
 	game.return_home()
 	check(game.parts.size() == 3 and game.collected.size() == 3, "Regrowth preserves unique parts")
+	game.save_path = "user://smoke-save.json"
+	game.save_enabled = true
+	game.save_progress()
+	var restored = load("res://main.tscn").instantiate()
+	root.add_child(restored)
+	restored.save_path = game.save_path
+	restored.save_enabled = true
+	restored.load_progress()
+	check(restored.installed == 3 and restored.parts.size() == 3, "Ship save round trip")
+	check(restored.gold == 14 and restored.upgrades == ["Golden fins"], "Inventory save round trip")
+	check(restored.astronaut == "girl", "Character save round trip")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(game.save_path))
+	game.save_enabled = false
+	restored.save_enabled = false
 	print("SMOKE: %d failures" % failures)
 	quit(1 if failures else 0)

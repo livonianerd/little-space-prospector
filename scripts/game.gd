@@ -29,6 +29,7 @@ var modal: PanelContainer
 var islands: Array[Vector3] = [Vector3(150, 420, 150), Vector3(480, 390, 105), Vector3(790, 330, 115), Vector3(1100, 420, 120), Vector3(1410, 350, 110), Vector3(1740, 400, 140), Vector3(2040, 320, 100)]
 var loot: Array[Dictionary] = []
 var save_enabled := true
+var save_path := SAVE
 
 func _ready() -> void:
 	if "--smoke-test" in OS.get_cmdline_user_args():
@@ -62,7 +63,7 @@ func panel_style() -> StyleBoxFlat:
 func button(text_value: String, action: Callable, parent: Node) -> Button:
 	var b := Button.new()
 	b.text = text_value
-	b.custom_minimum_size = Vector2(0, 56)
+	b.custom_minimum_size = Vector2(0, 72)
 	b.add_theme_font_size_override("font_size", 20)
 	b.pressed.connect(action)
 	parent.add_child(b)
@@ -91,11 +92,11 @@ func make_ui() -> void:
 	ship_button.position = Vector2(796, 16)
 	ship_button.size.x = 140
 	var home_button := button("Home [R]", return_home, ui)
-	home_button.position = Vector2(796, 80)
+	home_button.position = Vector2(796, 96)
 	home_button.size.x = 140
 	# Drawn pads use independent touch indices for simultaneous steering + lift.
 	modal = PanelContainer.new()
-	modal.position = Vector2(190, 118)
+	modal.position = Vector2(190, 80)
 	modal.size = Vector2(580, 400)
 	modal.add_theme_stylebox_override("panel", panel_style())
 	ui.add_child(modal)
@@ -134,7 +135,7 @@ func start_game(choice: String) -> void:
 	modal.hide()
 	reset_input()
 	save_progress()
-	announce("Hold JET to float. Steer to the glowing parts →")
+	announce("Hold JET to float. Steer to the glowing parts to the right.")
 
 func reset_input() -> void:
 	held = {"left": false, "right": false, "jet": false}
@@ -147,14 +148,14 @@ func show_workshop() -> void:
 	reset_input()
 	var box := clear_modal()
 	label("YOUR LITTLE SHIP   %d / 3" % installed, 28, box)
-	label("Hull → cabin → engines" if installed < 3 else "Ready for stargazing! Keep decorating.", 19, box)
+	label("Hull > cabin > engines" if installed < 3 else "Ready for stargazing! Keep decorating.", 19, box)
 	var install_button := button("Install next part (%d in backpack)" % (parts.size() - installed), install_part, box)
 	install_button.disabled = parts.size() <= installed or installed == 3
 	for item in [["Golden fins", 6, 0], ["Crystal window", 0, 3], ["Garden lights", 8, 2]]:
 		var name_value: String = item[0]
 		var cost_g: int = item[1]
 		var cost_d: int = item[2]
-		var buy := button(("✓ " + name_value) if name_value in upgrades else "%s  •  %d gold + %d diamonds" % [name_value, cost_g, cost_d], func(): buy_upgrade(name_value, cost_g, cost_d), box)
+		var buy := button(("Owned: " + name_value) if name_value in upgrades else "%s  •  %d gold + %d diamonds" % [name_value, cost_g, cost_d], func(): buy_upgrade(name_value, cost_g, cost_d), box)
 		buy.disabled = name_value in upgrades or gold < cost_g or diamonds < cost_d
 	button("Back to exploring", func(): mode = "play"; modal.hide(), box)
 
@@ -162,7 +163,7 @@ func install_part() -> void:
 	if installed < mini(3, parts.size()):
 		installed += 1
 		save_progress()
-		announce("Your little spaceship is complete! ✨" if installed == 3 else "Ship part installed. Looking good!")
+		announce("Your little spaceship is complete!" if installed == 3 else "Ship part installed. Looking good!")
 		show_workshop()
 
 func buy_upgrade(item: String, cost_g: int, cost_d: int) -> void:
@@ -211,7 +212,7 @@ func _input(event: InputEvent) -> void:
 			touch_ids.erase(event.index)
 	if event is InputEventScreenDrag and touch_ids.has(event.index):
 		touch_ids[event.index] = pad_at(event.position)
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.device != -1:
 		reset_mouse()
 		var pad := pad_at(event.position)
 		if event.pressed and pad != "": held[pad] = true
@@ -279,13 +280,13 @@ func collect_nearby() -> void:
 
 func save_progress() -> void:
 	if not save_enabled: return
-	var file := FileAccess.open(SAVE, FileAccess.WRITE)
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify({"version": 1, "astronaut": astronaut, "gold": gold, "diamonds": diamonds, "parts": parts, "installed": installed, "upgrades": upgrades, "collected": collected}))
 
 func load_progress() -> void:
-	if not save_enabled or not FileAccess.file_exists(SAVE): return
-	var data = JSON.parse_string(FileAccess.get_file_as_string(SAVE))
+	if not save_enabled or not FileAccess.file_exists(save_path): return
+	var data = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if not data is Dictionary: return
 	astronaut = "girl" if data.get("astronaut") == "girl" else "boy"
 	gold = maxi(0, int(data.get("gold", 0)))
@@ -335,7 +336,7 @@ func _draw() -> void:
 	draw_ship(Vector2(150-camera_x, 385), 0.7)
 	draw_astronaut(pos-Vector2(camera_x,0))
 	if mode == "play":
-		for data in [[Rect2(18, 532, 96, 88), "←", "left"], [Rect2(132, 532, 96, 88), "→", "right"], [Rect2(802, 532, 140, 88), "JET ↑", "jet"]]:
+		for data in [[Rect2(18, 532, 96, 88), "<", "left"], [Rect2(132, 532, 96, 88), ">", "right"], [Rect2(802, 532, 140, 88), "JET", "jet"]]:
 			draw_style_box(panel_style(), data[0])
 			text_at(data[0].position + Vector2(23, 55), data[1], 27, GOLD if pressed(data[2]) else MINT)
 		text_at(Vector2(284, 592), "A quiet corner of the universe", 18, Color("8198b3"))
