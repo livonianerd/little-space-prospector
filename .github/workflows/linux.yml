@@ -1,0 +1,37 @@
+name: Linux x86-64 build
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot and templates
+        run: bash tools/install-godot.sh
+      - name: Import and test
+        run: |
+          .tools/godot --headless --editor --path . --import --quit
+          .tools/godot --headless --path . --script tests/smoke.gd -- --smoke-test
+      - name: Export, launch, and package
+        run: |
+          mkdir -p build/linux
+          .tools/godot --headless --path . --export-release Linux build/linux/little-space-prospector.x86_64
+          chmod +x build/linux/little-space-prospector.x86_64
+          build/linux/little-space-prospector.x86_64 --headless --quit-after 120 -- --smoke-test
+          cp README.md build/linux/README.md
+          cd build/linux
+          zip -r ../little-space-prospector-linux-x86_64.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: little-space-prospector-linux-x86_64
+          path: build/little-space-prospector-linux-x86_64.zip
+      - name: Publish tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" build/little-space-prospector-linux-x86_64.zip --generate-notes

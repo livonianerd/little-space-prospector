@@ -1,0 +1,41 @@
+name: Web game and GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  export:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot and templates
+        run: bash tools/install-godot.sh
+      - name: Import and test
+        run: |
+          .tools/godot --headless --editor --path . --import --quit
+          .tools/godot --headless --path . --script tests/smoke.gd -- --smoke-test
+      - name: Export web
+        run: |
+          mkdir -p build/web
+          .tools/godot --headless --path . --export-release Web build/web/index.html
+          touch build/web/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+  deploy:
+    needs: export
+    runs-on: ubuntu-22.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
